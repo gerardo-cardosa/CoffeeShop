@@ -40,6 +40,14 @@ Each time you open a new terminal session, run:
 export FLASK_APP=api.py;
 ```
 
+To run on windows
+```bash
+$env:FLASK_APP="api.py"
+$env:FLASK_ENV="development"
+flask run --reload
+```
+
+
 To run the server, execute:
 
 ```bash
