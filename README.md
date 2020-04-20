@@ -5,7 +5,7 @@ This app is composed of two parts:
 1. The front end
 2. The back end
 
-The `./backend` is a [Python](https://www.python.org/ app based on Flask and SQL-Alchemy. In this [document](https://github.com/gerardo-cardosa/CoffeeShop/tree/Develeopment/backend), you can find the requirements
+The `./backend` is a [Python](https://www.python.org/) app based on Flask and SQL-Alchemy. In this [document](https://github.com/gerardo-cardosa/CoffeeShop/tree/Develeopment/backend), you can find the requirements
 and instructions to run the server. 
 
 The `./frontend` is a web app based on [Ionic](https://ionicframework.com/). This [document](https://github.com/gerardo-cardosa/CoffeeShop/tree/Develeopment/frontend) contains the requirements
