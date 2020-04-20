@@ -11,6 +11,14 @@ app = Flask(__name__)
 setup_db(app)
 CORS(app)
 
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Controll-Allow-Headers',
+                        'Content-Type, Authorization')
+    response.headers.add('Access-Controll-Allow-Methods',
+                        'GET, POST, PATCH, DELETE, OPTIONS')
+    return response
+
 '''
 @TODO uncomment the following line to initialize the datbase
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
@@ -60,7 +68,8 @@ def getDrinks():
         or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks-detail')
-def getDrinksDetail():
+@requires_auth('get:drinks-detail')
+def getDrinksDetail(jwt):
     result = {
         "success" : True,
         "drinks"  : [],
@@ -86,12 +95,30 @@ def getDrinksDetail():
         or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks', methods=['POST'])
-def addDrink():
+@requires_auth('post:drinks')
+def addDrink(jwt):
     body = request.get_json()
 
     title = body.get('title', None)
     recipe = body.get('recipe', None)
 
+    recipeStr = validateDrink(title, recipe)
+    print(title, recipeStr)
+    try:    
+        newDrink = Drink(title=title, recipe=recipe)
+        newDrink.insert()
+        return jsonify({
+            "status": 200,
+            "success": True,
+            "drinks" : [newDrink.long()]
+        })
+    except:
+        abort(422)
+
+'''
+    Function to validate Drinks information
+'''
+def validateDrink(title, recipe):
     # Will return error if any of the required parameters is missing
     if title is None or recipe is None:
         abort(422)
@@ -107,20 +134,8 @@ def addDrink():
 
         if color and name and parts:
             abort(422)
-    # try:
-    
-    recipeStr = str(recipe).replace("'",'"')
-    print('New ====================================== ',recipeStr)
-    newDrink = Drink(title=title, recipe=recipeStr)
-    newDrink.insert()
-    return jsonify({
-        "success": True,
-        "drinks" : [newDrink.long()]
-    })
-    # except:
-    #     abort(422)
-
-
+    # Almost got crazy solving an error caused by having the wrong quotes :(
+    return str(recipe).replace("'",'"')
 
 '''
 @TODO implement endpoint
@@ -133,6 +148,31 @@ def addDrink():
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks/<int:drink_id>', methods=['PATCH'])
+@requires_auth('patch:drinks')
+def patchDrink(jwt, drink_id):
+    body = request.get_json()
+
+    title = body.get('title', None)
+    recipe = body.get('recipe', None)
+    try:
+        drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
+        if drink is None:
+            abort(404)
+        
+        if title is not None:
+            drink.title = title
+        if recipe is not None:
+            recipeStr = validateDrink(title, recipe)
+            drink.recipe = recipeStr
+        drink.update()
+        return jsonify({
+            "success": True,
+            "drinks" : [drink.long()]
+        })
+
+    except:
+        abort(422)
 
 
 '''
@@ -145,7 +185,20 @@ def addDrink():
     returns status code 200 and json {"success": True, "delete": id} where id is the id of the deleted record
         or appropriate status code indicating reason for failure
 '''
-
+@app.route('/drinks/<int:drink_id>', methods=['DELETE'])
+@requires_auth('delete:drinks')
+def deleteDrink(jwt, drink_id):
+    try:
+        drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
+        if drink is None:
+            abort(404) 
+        drink.delete()
+        return jsonify({
+            "success": True,
+            "delete" : drink_id
+        })
+    except:
+        abort(422)
 
 ## Error Handling
 '''
@@ -174,7 +227,7 @@ def unprocessable(error):
     error handler should conform to general task above 
 '''
 @app.errorhandler(404)
-def unprocessable(error):
+def notFoundError(error):
     return jsonify({
                     "success": False, 
                     "error": 404,
@@ -185,11 +238,21 @@ def unprocessable(error):
 '''
 @Completed implement error handler for AuthError
     error handler should conform to general task above 
+
+    Reference for isinstance: https://stackoverflow.com/a/1303252
 '''
 @app.errorhandler(401)
-def unprocessable(error):
+def unauthorized(error):
     return jsonify({
                     "success": False, 
                     "error": 401,
-                    "message": "unauthorized"
+                    "message": error.description.error['description']
                     }), 401
+
+@app.errorhandler(403)
+def forbidden(error):
+    return jsonify({
+                    "success": False, 
+                    "error": 403,
+                    "message": error.description.error['description']
+                    }), 403
