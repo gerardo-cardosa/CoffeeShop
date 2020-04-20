@@ -49,7 +49,7 @@ export FLASK_APP=api.py;
 
 To run on windows
 ```bash
-$env:FLASK_APP="api.py"
+$env:FLASK_APP="src/api.py"
 $env:FLASK_ENV="development"
 flask run --reload
 ```
