@@ -100,11 +100,12 @@ def addDrink(jwt):
     title = body.get('title', None)
     recipe = body.get('recipe', None)
 
+    if title is None or recipe is None:
+        abort(422)
+
     recipeStr = validateDrink(title, recipe)
-    print(title, recipeStr)
     try:
         newDrink = Drink(title=title, recipe=recipeStr)
-        print(newDrink)
         newDrink.insert()
 
         result = {
@@ -159,26 +160,28 @@ def validateDrink(title, recipe):
 @app.route('/drinks/<int:drink_id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
 def patchDrink(jwt, drink_id):
+    print('This is a Patch ', drink_id)
     body = request.get_json()
 
     title = body.get('title', None)
     recipe = body.get('recipe', None)
     try:
         drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
+        
         if drink is None:
             abort(404)
 
         if title is not None:
             drink.title = title
         if recipe is not None:
-            recipeStr = validateDrink(title, recipe)
+            recipeStr = validateDrink(drink.title, recipe)
             drink.recipe = recipeStr
+
         drink.update()
         return jsonify({
-            "success": True,
-            "drinks": [drink.long()]
+                "success": True,
+                "drinks": [drink.long()]
         })
-
     except:
         abort(422)
 
